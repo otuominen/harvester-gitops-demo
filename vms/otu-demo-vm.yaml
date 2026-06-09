@@ -1,0 +1,78 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  namespace: default
+  name: otu-demo-vm
+  annotations:
+    harvesterhci.io/volumeClaimTemplates: >-
+      [{"metadata":{"name":"otu-demo-vm-disk-0","annotations":{"harvesterhci.io/imageId":"harvester-public/image-6rv2r"}},"spec":{"accessModes":["ReadWriteMany"],"resources":{"requests":{"storage":"10Gi"}},"volumeMode":"Block","storageClassName":"longhorn-image-6rv2r"}}]
+    harvesterhci.io/enableCPUAndMemoryHotplug: 'true'
+    network.harvesterhci.io/ips: '[]'
+  labels:
+    harvesterhci.io/creator: harvester
+    harvesterhci.io/os: linux
+spec:
+  runStrategy: RerunOnFailure
+  template:
+    metadata:
+      annotations:
+        # 1. SUCCESS: This signals Harvester to extract your "otu-ssh-key" CRD public key 
+        harvesterhci.io/sshNames: '["default/otu-ssh-key"]'
+      labels:
+        harvesterhci.io/vmName: otu-demo-vm
+    spec:
+      domain:
+        machine:
+          type: ''
+        cpu:
+          cores: 1
+          sockets: 2
+          threads: 1
+          maxSockets: 4
+        devices:
+          inputs:
+            - bus: usb
+              name: tablet
+              type: tablet
+          interfaces:
+            - model: virtio
+              name: default
+              bridge: {}
+          disks:
+            - name: disk-0
+              disk:
+                bus: virtio
+              bootOrder: 1
+            - name: cloudinitdisk
+              cdrom:
+                bus: sata
+        resources:
+          limits:
+            memory: 8Gi
+            cpu: '4'
+        features:
+          acpi:
+            enabled: true
+        memory:
+          guest: 4Gi
+          maxGuest: 8Gi
+      evictionStrategy: LiveMigrateIfPossible
+      networks:
+        - name: default
+          multus:
+            networkName: harvester-public/vlan2229
+      volumes:
+        - name: disk-0
+          persistentVolumeClaim:
+            claimName: 'otu-demo-vm-disk-0'
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            userData: |
+              #cloud-config
+              # 2. SUCCESS: Safe non-deprecated list context. 
+              # Instantiates the native image user (sles) and automatically binds Harvester's root key mappings to it.
+              users:
+                - default
+              runcmd:
+                - systemctl enable --now qemu-guest-agent.service
+      terminationGracePeriodSeconds: 120

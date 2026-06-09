@@ -71,9 +71,7 @@ spec:
             # 2. Use inline userData so Fleet doesn't require separate unmanaged Secret mappings
             userData: |
               #cloud-config
-              package_update: true
-              packages:
-                - qemu-guest-agent
+              user: sles
               runcmd:
                 - [ systemctl, enable, --now, qemu-guest-agent.service ]
       terminationGracePeriodSeconds: 120

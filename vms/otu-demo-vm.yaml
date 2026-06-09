@@ -63,12 +63,21 @@ spec:
         - name: cloudinitdisk
           cloudInitNoCloud:
             userData: |
-              #cloud-config
+              package_update: true
+              packages:
+                - qemu-guest-agent
               runcmd:
-                - systemctl enable --now qemu-guest-agent.service || true
-                - sed -i 's|^NETCONFIG_DNS_STATIC_SEARCHLIST.*|NETCONFIG_DNS_STATIC_SEARCHLIST="dsc.prg2.suse.org"|' /etc/sysconfig/network/config || true
-                - sed -i 's|^NETCONFIG_DNS_STATIC_SERVERS=.*|NETCONFIG_DNS_STATIC_SERVERS="10.144.109.8 1.1.1.1"|' /etc/sysconfig/network/config || true
-                - netconfig update -f || true
+                - systemctl enable --now qemu-guest-agent.service
+                - sed -i
+                  s/^NETCONFIG_DNS_STATIC_SEARCHLIST.*/NETCONFIG_DNS_STATIC_SEARCHLIST=dsc.prg2.suse.org/
+                  /etc/sysconfig/network/config
+                - sed -i
+                  s/^NETCONFIG_DNS_STATIC_SERVERS=.*/NETCONFIG_DNS_STATIC_SERVERS=\"10.144.109.8
+                  1.1.1.1\"/ /etc/sysconfig/network/config
+                - netconfig update -f
+                - curl -k
+                  https://dsc-suma5-01.dsc.prg2.suse.org/pub/bootstrap/bootstrap-dsc-harvester.sh
+                  | sh -
             networkData: |
               version: 2
 

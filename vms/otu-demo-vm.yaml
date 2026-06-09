@@ -69,10 +69,6 @@ spec:
           cloudInitNoCloud:
             userData: |
               #cloud-config
-              # 2. SUCCESS: Safe non-deprecated list context. 
-              # Instantiates the native image user (sles) and automatically binds Harvester's root key mappings to it.
-              users:
-                - default
               runcmd:
                 - systemctl enable --now qemu-guest-agent.service
       terminationGracePeriodSeconds: 120

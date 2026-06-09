@@ -20,7 +20,7 @@ spec:
           sockets: 1
           threads: 1
         memory:
-          guest: 4Gi # <-- This sets the initial boot size the OS sees
+          guest: 4Gi # <-- Initial boot size
         devices:
           disks:
             - bootOrder: 1
@@ -46,10 +46,10 @@ spec:
         resources:
           limits:
             cpu: '4'
-            memory: 8Gi
+            memory: 8Gi # <-- Dynamic Hotplug Limit Max
           requests:
-              cpu: 250m
-              memory: 4Gi
+            cpu: 250m   # Fixed indentation alignment
+            memory: 4Gi # Fixed indentation alignment
       evictionStrategy: LiveMigrateIfPossible
       networks:
         - multus:
@@ -59,21 +59,21 @@ spec:
       volumes:
         - name: disk-0
           persistentVolumeClaim:
-            # Matches the volume claim template defined in metadata annotations
             claimName: otu-demo-vm-disk-0
         - name: cloudinitdisk
           cloudInitNoCloud:
-            # Directly provision cloud-config to map the existing sles user with the ssh key
             userData: |
               #cloud-config
               runcmd:
-                - systemctl enable --now qemu-guest-agent.service
-                - sed -i 's|^NETCONFIG_DNS_STATIC_SEARCHLIST.*|NETCONFIG_DNS_STATIC_SEARCHLIST="dsc.prg2.suse.org"|' /etc/sysconfig/network/config
-                - sed -i 's|^NETCONFIG_DNS_STATIC_SERVERS=.*|NETCONFIG_DNS_STATIC_SERVERS="10.144.109.8 1.1.1.1"|' /etc/sysconfig/network/config
-                - netconfig update -f
+                - systemctl enable --now qemu-guest-agent.service || true
+                - sed -i 's|^NETCONFIG_DNS_STATIC_SEARCHLIST.*|NETCONFIG_DNS_STATIC_SEARCHLIST="dsc.prg2.suse.org"|' /etc/sysconfig/network/config || true
+                - sed -i 's|^NETCONFIG_DNS_STATIC_SERVERS=.*|NETCONFIG_DNS_STATIC_SERVERS="10.144.109.8 1.1.1.1"|' /etc/sysconfig/network/config || true
+                - netconfig update -f || true
             networkData: |
               version: 2
 
+---
+# CRUCIAL FIX: The three dashes below separate the VM from the PVC cleanly
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

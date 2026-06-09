@@ -1,0 +1,10 @@
+# fleet.yaml
+defaultNamespace: default
+
+diff:
+  comparePatches:
+  - apiVersion: kubevirt.io/v1
+    kind: VirtualMachine
+    operations:
+      - op: remove
+        path: /spec/template/spec/domain/machine/type

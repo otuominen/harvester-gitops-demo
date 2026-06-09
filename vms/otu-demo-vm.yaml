@@ -65,7 +65,7 @@ spec:
       volumes:
         - name: disk-0
           persistentVolumeClaim:
-            claimName: 'fleet-linux-vm-disk-0'
+            claimName: 'otu-demo-vm-disk-0'
         - name: cloudinitdisk
           cloudInitNoCloud:
             # 2. Use inline userData so Fleet doesn't require separate unmanaged Secret mappings

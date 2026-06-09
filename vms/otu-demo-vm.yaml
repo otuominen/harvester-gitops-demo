@@ -3,24 +3,37 @@ kind: VirtualMachine
 metadata:
   name: otu-demo-vm
   namespace: default
+  annotations:
+    template-version.harvesterhci.io/customName: VUwKPHiE5J
+  labels:
+    harvesterhci.io/os: linux
+    template.harvesterhci.io/templateID: dsc-sles-instance
 spec:
   runStrategy: RerunOnFailure
   template:
     metadata:
       annotations:
-        # Maps the Harvester KeyPair reference
         harvesterhci.io/sshNames: '["default/otu-ssh-key"]'
       labels:
         harvesterhci.io/vmName: otu-demo-vm
     spec:
-      affinity: {}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: network.harvesterhci.io/dsc-ntwk-1
+                    operator: In
+                    values:
+                      - 'true'
+      architecture: amd64
       domain:
         cpu:
           cores: 4
           sockets: 1
           threads: 1
         memory:
-          guest: 4Gi # <-- Initial boot size
+          guest: 4Gi
         devices:
           disks:
             - bootOrder: 1
@@ -46,10 +59,10 @@ spec:
         resources:
           limits:
             cpu: '4'
-            memory: 8Gi # <-- Dynamic Hotplug Limit Max
+            memory: 8Gi
           requests:
-            cpu: 250m   # Fixed indentation alignment
-            memory: 4Gi # Fixed indentation alignment
+            cpu: 250m
+            memory: 4Gi
       evictionStrategy: LiveMigrateIfPossible
       networks:
         - multus:
@@ -61,22 +74,20 @@ spec:
           persistentVolumeClaim:
             claimName: otu-demo-vm-disk-0
         - name: cloudinitdisk
-                  cloudInitNoCloud:
-                    # FIX: Included #cloud-config header and clean single-line configuration scripts
-                    userData: |
-                      #cloud-config
-                      runcmd:
-                        - sed -i 's|^NETCONFIG_DNS_STATIC_SEARCHLIST.*|NETCONFIG_DNS_STATIC_SEARCHLIST="dsc.prg2.suse.org"|' /etc/sysconfig/network/config
-                        - sed -i 's|^NETCONFIG_DNS_STATIC_SERVERS=.*|NETCONFIG_DNS_STATIC_SERVERS="10.144.109.8 1.1.1.1"|' /etc/sysconfig/network/config
-                        - netconfig update -f
-                        - zypper refresh
-                        - zypper install -y qemu-guest-agent
-                        - systemctl enable --now qemu-guest-agent.service
-                    networkData: |
-                      version: 2
+          cloudInitNoCloud:
+            userData: |
+              #cloud-config
+              runcmd:
+                - sed -i 's|^NETCONFIG_DNS_STATIC_SEARCHLIST.*|NETCONFIG_DNS_STATIC_SEARCHLIST="dsc.prg2.suse.org"|' /etc/sysconfig/network/config
+                - sed -i 's|^NETCONFIG_DNS_STATIC_SERVERS=.*|NETCONFIG_DNS_STATIC_SERVERS="10.144.109.8 1.1.1.1"|' /etc/sysconfig/network/config
+                - netconfig update -f
+                - zypper refresh
+                - zypper install -y qemu-guest-agent
+                - systemctl enable --now qemu-guest-agent.service
+            networkData: |
+              version: 2
 
 ---
-# CRUCIAL FIX: The three dashes below separate the VM from the PVC cleanly
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

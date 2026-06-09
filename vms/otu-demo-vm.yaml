@@ -46,7 +46,7 @@ spec:
               bootOrder: 1
             - name: cloudinitdisk
               cdrom:
-                bus: virtio
+                bus: sata
         resources:
           limits:
             memory: 8Gi

@@ -1,0 +1,91 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: otu-demo-vm
+  namespace: default
+spec:
+  runStrategy: RerunOnFailure
+  template:
+    metadata:
+      annotations:
+        # Maps the Harvester KeyPair reference
+        harvesterhci.io/sshNames: '["default/otu-ssh-key"]'
+      labels:
+        harvesterhci.io/vmName: otu-demo-vm
+    spec:
+      affinity: {}
+      domain:
+        cpu:
+          cores: 4
+          sockets: 1
+          threads: 1
+        memory:
+          guest: 4Gi # <-- Initial boot size
+        devices:
+          disks:
+            - bootOrder: 1
+              disk:
+                bus: virtio
+              name: disk-0
+            - disk:
+                bus: virtio
+              name: cloudinitdisk
+          inputs:
+            - bus: usb
+              name: tablet
+              type: tablet
+          interfaces:
+            - bridge: {}
+              model: virtio
+              name: default
+        features:
+          acpi:
+            enabled: true
+        machine:
+          type: q35
+        resources:
+          limits:
+            cpu: '4'
+            memory: 8Gi # <-- Dynamic Hotplug Limit Max
+          requests:
+            cpu: 250m   # Fixed indentation alignment
+            memory: 4Gi # Fixed indentation alignment
+      evictionStrategy: LiveMigrateIfPossible
+      networks:
+        - multus:
+            networkName: harvester-public/vlan2229
+          name: default
+      terminationGracePeriodSeconds: 120
+      volumes:
+        - name: disk-0
+          persistentVolumeClaim:
+            claimName: otu-demo-vm-disk-0
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            userData: |
+              #cloud-config
+              runcmd:
+                - systemctl enable --now qemu-guest-agent.service || true
+                - sed -i 's|^NETCONFIG_DNS_STATIC_SEARCHLIST.*|NETCONFIG_DNS_STATIC_SEARCHLIST="dsc.prg2.suse.org"|' /etc/sysconfig/network/config || true
+                - sed -i 's|^NETCONFIG_DNS_STATIC_SERVERS=.*|NETCONFIG_DNS_STATIC_SERVERS="10.144.109.8 1.1.1.1"|' /etc/sysconfig/network/config || true
+                - netconfig update -f || true
+            networkData: |
+              version: 2
+
+---
+# CRUCIAL FIX: The three dashes below separate the VM from the PVC cleanly
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: otu-demo-vm-disk-0
+  namespace: default
+  annotations:
+    harvesterhci.io/imageId: "harvester-public/image-6rv2r"
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi
+  volumeMode: Block
+  storageClassName: longhorn-image-6rv2r

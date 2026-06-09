@@ -3,12 +3,6 @@ kind: VirtualMachine
 metadata:
   name: otu-demo-vm
   namespace: default
-  annotations:
-    # Generates the target 10Gi block storage from the specified Longhorn base image
-    harvesterhci.io/volumeClaimTemplates: >-
-      [{"metadata":{"name":"otu-demo-vm-disk-0"},"spec":{"accessModes":["ReadWriteMany"],"resources":{"requests":{"storage":"10Gi"}},"volumeMode":"Block","storageClassName":"longhorn-image-6rv2r"}}]
-  labels:
-    harvesterhci.io/os: linux
 spec:
   runStrategy: RerunOnFailure
   template:

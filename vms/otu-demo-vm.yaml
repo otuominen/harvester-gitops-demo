@@ -1,0 +1,110 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: otu-demo-vm
+  namespace: default
+  annotations:
+    # Retained: Maps directly to your specific template version hash
+    template-version.harvesterhci.io/customName: VUwKPHiE5J
+  labels:
+    harvesterhci.io/os: linux
+    template.harvesterhci.io/templateID: dsc-sles-instance
+spec:
+  runStrategy: RerunOnFailure
+  template:
+    metadata:
+      annotations:
+        # Triggers Harvester to inject your cluster's existing 'otu-ssh-key' into the default 'sles' account
+        harvesterhci.io/sshNames: '["default/otu-ssh-key"]'
+      labels:
+        harvesterhci.io/vmName: otu-demo-vm
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: network.harvesterhci.io/dsc-ntwk-1
+                    operator: In
+                    values:
+                      - 'true'
+      architecture: amd64
+      domain:
+        cpu:
+          cores: 4
+          sockets: 1
+          threads: 1
+        memory:
+          guest: 4Gi # <-- Boots up at 4GB for your presentation
+        devices:
+          disks:
+            - bootOrder: 1
+              disk:
+                bus: virtio
+              name: disk-0
+            - disk:
+                bus: virtio
+              name: cloudinitdisk
+          inputs:
+            - bus: usb
+              name: tablet
+              type: tablet
+          interfaces:
+            - bridge: {}
+              model: virtio
+              name: default
+        features:
+          acpi:
+            enabled: true
+        machine:
+          type: q35
+        resources:
+          limits:
+            cpu: '4'
+            memory: 8Gi # <-- Allowed to upscale live to 8GB via GitOps
+          requests:
+            cpu: 250m
+            memory: 4Gi
+      evictionStrategy: LiveMigrateIfPossible
+      networks:
+        - multus:
+            networkName: harvester-public/vlan2229
+          name: default
+      terminationGracePeriodSeconds: 120
+      volumes:
+        - name: disk-0
+          persistentVolumeClaim:
+            claimName: otu-demo-vm-disk-0
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            # FIX: Validated cloud-config with unified, single-line shell executions
+            userData: |
+              #cloud-config
+              package_update: true
+              packages:
+                - qemu-guest-agent
+              runcmd:
+                - systemctl enable --now qemu-guest-agent.service
+                - sed -i 's|^NETCONFIG_DNS_STATIC_SEARCHLIST.*|NETCONFIG_DNS_STATIC_SEARCHLIST="dsc.prg2.suse.org"|' /etc/sysconfig/network/config
+                - sed -i 's|^NETCONFIG_DNS_STATIC_SERVERS=.*|NETCONFIG_DNS_STATIC_SERVERS="10.144.109.8 1.1.1.1"|' /etc/sysconfig/network/config
+                - netconfig update -f
+            networkData: |
+              version: 2
+
+---
+# Separator allows Fleet to track and clean up the storage along with the compute resource
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: otu-demo-vm-disk-0
+  namespace: default
+  annotations:
+    harvesterhci.io/imageId: "harvester-public/image-6rv2r"
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi # <-- Aligned with your exact template storage profile
+  volumeMode: Block
+  storageClassName: longhorn-image-6rv2r

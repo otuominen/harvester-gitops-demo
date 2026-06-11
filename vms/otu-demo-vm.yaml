@@ -54,7 +54,7 @@ spec:
           acpi:
             enabled: true
         memory:
-          guest: 4Gi
+          guest: 8Gi
           maxGuest: 8Gi
       evictionStrategy: LiveMigrateIfPossible
       networks:
